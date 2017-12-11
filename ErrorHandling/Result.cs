@@ -1,4 +1,5 @@
 ﻿using System;
+using FluentAssertions;
 
 namespace ResultOfTask
 {
@@ -27,7 +28,16 @@ namespace ResultOfTask
 
 	public static class Result
 	{
-		public static Result<T> AsResult<T>(this T value)
+	    public static Result<TInput> ReplaceError<TInput>(this Result<TInput> input, Func<string, string> func)
+	    {
+	        return input.IsSuccess ? Ok(input.Value) : Fail<TInput>(func(input.Error));
+	    }
+
+	    public static Result<TInput> RefineError<TInput>(this Result<TInput> input, string msg)
+	    {
+	        return input.ReplaceError(e => $"{msg}. {input.Error}");
+	    }
+        public static Result<T> AsResult<T>(this T value)
 		{
 			return Ok(value);
 		}
@@ -54,25 +64,21 @@ namespace ResultOfTask
 			}
 		}
 
-		public static Result<TOutput> Then<TInput, TOutput>(
-			this Result<TInput> input,
-			Func<TInput, TOutput> continuation)
+		public static Result<TOutput> Then<TInput, TOutput>(this Result<TInput> input, Func<TInput, TOutput> continuation)
 		{
-			throw new NotImplementedException();
+		    return Of(() => continuation(input.GetValueOrThrow()));
 		}
 
-		public static Result<TOutput> Then<TInput, TOutput>(
-			this Result<TInput> input,
-			Func<TInput, Result<TOutput>> continuation)
+		public static Result<TOutput> Then<TInput, TOutput>(this Result<TInput> input, Func<TInput, Result<TOutput>> continuation)
 		{
-			throw new NotImplementedException();
+		    return !input.IsSuccess ? Fail<TOutput>(input.Error) : continuation(input.Value);
 		}
-
-		public static Result<TInput> OnFail<TInput>(
-			this Result<TInput> input,
-			Action<string> handleError)
+    
+		public static Result<TInput> OnFail<TInput>(this Result<TInput> input,Action<string> handleError)
 		{
-			throw new NotImplementedException();
+            if (!input.IsSuccess)
+		        handleError(input.Error);
+		    return input;
 		}
 	}
 }
